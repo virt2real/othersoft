@@ -27,7 +27,19 @@
 
 		if (filesize($filename) < $FILE_MIN_SIZE) return -1;
 
-		$lang = ($LANG == "ru") ? 'ru-RU' : 'en-US';
+		switch ($LANG) {
+			case "ru":
+				$lang = "ru-RU";
+			break;
+			case "en":
+				$lang = "en-US";
+			break;
+			case "de":
+				$lang = "de-DE";
+			break;
+			default:
+				$lang = "en-US";
+		}
 
 		if ($VERBOSE) echo "sending to server... ";
 
@@ -90,7 +102,8 @@
 				break;
 
 			default:
-				$lang = ($LANG == "ru") ? 'ru' : 'en';
+
+				$lang = $LANG; // == "ru") ? 'ru' : 'en';
 
 				exec('espeak "'.$text.'"  -a 200 -g 3 -k 1 -p 99 -v '.$lang.' -s 120 --stdout | aplay -q');
 				break;
@@ -109,7 +122,8 @@
 
 		if (!$text) return -1;
 
-		$lang = ($LANG == "ru") ? 'ru' : 'en';
+		//$lang = ($LANG == "ru") ? 'ru' : 'en';
+		$lang = $LANG;
 
 		/* check dir */
 		if (!file_exists($CACHE_PATH))
