@@ -23,6 +23,11 @@ FILE *readf;
 char filename[255];
 int delayvalue;
 
+void usage();
+void selectDevice(int file, int addr, char * name);
+void writeToDevice(int file, char * buf, int len);
+void parseRegisters(char * buffer);
+
 int main(int argc, char * argv[]) {
 
 	long filesize;
@@ -205,8 +210,9 @@ void writeToDevice(int file, char * buf, int len) {
 }
 
 void selectDevice(int file, int addr, char * name) {
-	if (ioctl(file, I2C_SLAVE, addr) < 0) {
-		printf("%s not present\n", name);
+	if (ioctl(file, I2C_SLAVE_FORCE, addr) < 0) {
+		printf("\n%s 0x%x not present\n", name, i2c_address);
+		exit(1);
 	}
 }
 
