@@ -37,7 +37,7 @@ int main(int argc, char * argv[]) {
 	while (1) {
 		int option_index = 0;
 		static struct option long_options[] = { {0, 0, 0, 0} };
-		c = getopt_long (argc, argv, "d:a:f:h?", long_options, &option_index);
+		c = getopt_long (argc, argv, "d:a:f:s:h?", long_options, &option_index);
 
 		if (c == -1) 
 			break;
@@ -47,7 +47,7 @@ int main(int argc, char * argv[]) {
 				n = atoi(optarg);
 				sprintf(i2c_device, "/dev/i2c-%d", n);
 			break;
-			case 'p':
+			case 's':
 				delayvalue = atoi(optarg);
 			break;
 			case 'a':
@@ -217,6 +217,7 @@ void usage() {
 	printf ("Usage: [-d <i2cdevnum>] -a <i2caddr> -f <filename> -p <pause> [h] [?]\n");
 	printf ("-d\t\tI2C device number, for example, -d 1 = use device /dev/i2c-1\n");
 	printf ("-a\t\tdevice I2C address, for example, -a 0x3c\n");
+	printf ("-f\t\tfilename with registers values\n");
 	printf ("-s\t\tmake pause (at microseconds) after every write, for example, -s 10\n");
 	printf ("-? or -h\tshow this info\n");
 }
