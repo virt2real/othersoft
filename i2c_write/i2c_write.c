@@ -26,6 +26,7 @@ int delayvalue;
 void usage();
 void selectDevice(int file, int addr, char * name);
 void writeToDevice(int file, char * buf, int len);
+int checkDevice(int file, int addr, char * name);
 void parseRegisters(char * buffer);
 
 int main(int argc, char * argv[]) {
@@ -83,7 +84,7 @@ int main(int argc, char * argv[]) {
 
 	/* check registers file exists */
 	if(access(filename, F_OK ) == -1 ) {
-		printf("file %s not found\n", filename);
+		printf("File %s not found\n", filename);
 		exit(1);
 	}
 
@@ -92,14 +93,14 @@ int main(int argc, char * argv[]) {
 	stat(filename, &st);
 	filesize = st.st_size;
 	if (!filesize) {
-		printf("empty registers file\n");
+		printf("Empty registers file\n");
 		exit(1);
 	}
 
 	/* allocate memory for file buffer */
 	buffer = (char*) malloc(sizeof(char)*(filesize));
 	if (!buffer) {
-		printf("can't allocate memory\n");
+		printf("Can't allocate memory\n");
 		exit(1);
 	}
 
@@ -113,9 +114,17 @@ int main(int argc, char * argv[]) {
 		exit(1);
 	}
 
-	printf("using I2C device %s\n", i2c_device);
-	printf("writing registers from file %s to I2C address 0x%x...", filename, i2c_address);
+	printf("Using I2C bus %s\n", i2c_device);
 
+	/* check i2c device presence */
+	if (!checkDevice(file, i2c_address, "device")) {
+		printf("Device 0x%x not found\n", i2c_address);
+		exit(1);
+	} else {
+		printf("Device 0x%x found (BUSY)\n", i2c_address);
+	}
+
+	printf("Writing registers from file %s to I2C address 0x%x...\n", filename, i2c_address);
 
 	/* select i2c device */
 	selectDevice(file, i2c_address, "device");
@@ -123,7 +132,7 @@ int main(int argc, char * argv[]) {
 	/* parse registers file */
 	parseRegisters(buffer);
 
-	printf(" Done!\n");
+	printf("Done!\n");
 
 	free(buffer);
 }
@@ -213,6 +222,15 @@ void selectDevice(int file, int addr, char * name) {
 	if (ioctl(file, I2C_SLAVE_FORCE, addr) < 0) {
 		printf("\n%s 0x%x not present\n", name, i2c_address);
 		exit(1);
+	}
+}
+
+int checkDevice(int file, int addr, char * name) {
+	if (ioctl(file, I2C_SLAVE, addr) < 0) {
+		if (errno == EBUSY) {
+			return 1;
+		} else
+			return 0;
 	}
 }
 
