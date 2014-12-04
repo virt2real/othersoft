@@ -8,12 +8,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <linux/i2c-dev.h>
+//#include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include "i2c-dev.h"
 
 int file;
 int i2c_address;
@@ -24,7 +25,6 @@ int checkDevice(int file, int addr, char * name);
 
 int main(int argc, char * argv[]) {
 
-	long filesize;
 	int c;
 	int n;
 
@@ -63,6 +63,11 @@ int main(int argc, char * argv[]) {
 		exit(1);
 	}
 
+	if ((file = open(i2c_device, O_RDWR)) < 0) {
+		printf("Failed to open the I2C device\n");
+		exit(2);
+	}
+
 	/* check i2c device presence */
 	if (!checkDevice(file, i2c_address, "device")) {
 		printf("Device 0x%x not found\n", i2c_address);
@@ -78,10 +83,17 @@ int checkDevice(int file, int addr, char * name) {
 	if (ioctl(file, I2C_SLAVE, addr) < 0) {
 		if (errno == EBUSY) {
 			return 1;
-		} else
+		} else {
 			return 0;
-	} else 
-		return 1;
+		}
+	} else {
+		union i2c_smbus_data data;
+		int res = i2c_smbus_access(file, I2C_SMBUS_READ, 0, I2C_SMBUS_BYTE, &data);
+		if (res < 0)
+			return 0;
+		else
+			return 1;
+	}
 }
 
 /* usage info */

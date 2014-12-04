@@ -8,12 +8,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <linux/i2c-dev.h>
+//#include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include "i2c-dev.h"
 
 int file;
 int i2c_address;
@@ -229,10 +230,17 @@ int checkDevice(int file, int addr, char * name) {
 	if (ioctl(file, I2C_SLAVE, addr) < 0) {
 		if (errno == EBUSY) {
 			return 1;
-		} else
+		} else {
 			return 0;
-	} else 
-		return 1;
+		}
+	} else {
+		union i2c_smbus_data data;
+		int res = i2c_smbus_access(file, I2C_SMBUS_READ, 0, I2C_SMBUS_BYTE, &data);
+		if (res < 0)
+			return 0;
+		else
+			return 1;
+	}
 }
 
 /* usage info */
