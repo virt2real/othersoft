@@ -121,7 +121,7 @@ int main(int argc, char * argv[]) {
 		printf("Device 0x%x not found\n", i2c_address);
 		exit(1);
 	} else {
-		printf("Device 0x%x found (BUSY)\n", i2c_address);
+		printf("Device 0x%x found\n", i2c_address);
 	}
 
 	printf("Writing registers from file %s to I2C address 0x%x...\n", filename, i2c_address);
@@ -231,7 +231,8 @@ int checkDevice(int file, int addr, char * name) {
 			return 1;
 		} else
 			return 0;
-	}
+	} else 
+		return 1;
 }
 
 /* usage info */
