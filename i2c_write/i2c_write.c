@@ -234,14 +234,15 @@ int checkDevice(int file, int addr, char * name) {
 			return 0;
 		}
 	} else {
-		union i2c_smbus_data data;
-		int res = i2c_smbus_access(file, I2C_SMBUS_READ, 0, I2C_SMBUS_BYTE, &data);
-		if (res < 0)
+		int res = i2c_smbus_write_quick(file, I2C_SMBUS_WRITE);
+		if (res < 0) {
 			return 0;
+		}
 		else
 			return 1;
 	}
 }
+
 
 /* usage info */
 void usage() {
