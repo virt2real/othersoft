@@ -23,6 +23,8 @@ char * buffer;
 FILE *readf;
 char filename[255];
 int delayvalue;
+int startregister = 0;
+int verbose = 0;
 
 void usage();
 void selectDevice(int file, int addr, char * name);
@@ -44,7 +46,7 @@ int main(int argc, char * argv[]) {
 	while (1) {
 		int option_index = 0;
 		static struct option long_options[] = { {0, 0, 0, 0} };
-		c = getopt_long (argc, argv, "d:a:f:s:h?", long_options, &option_index);
+		c = getopt_long (argc, argv, "d:a:f:s:r:vh?", long_options, &option_index);
 
 		if (c == -1) 
 			break;
@@ -57,11 +59,17 @@ int main(int argc, char * argv[]) {
 			case 's':
 				delayvalue = atoi(optarg);
 			break;
+			case 'r':
+				startregister = strtol(optarg, 0, 16);
+			break;
 			case 'a':
 				i2c_address = strtol(optarg, 0, 16);
 			break;
 			case 'f':
 				sprintf(filename, "%s", optarg);
+			break;
+			case 'v':
+				verbose = 1;
 			break;
 			case 'h':
 			case '?':
@@ -115,25 +123,34 @@ int main(int argc, char * argv[]) {
 		exit(1);
 	}
 
-	printf("Using I2C bus %s\n", i2c_device);
+	if (verbose) printf("Using I2C bus %s\n", i2c_device);
 
 	/* check i2c device presence */
 	if (!checkDevice(file, i2c_address, "device")) {
 		printf("Device 0x%x not found\n", i2c_address);
 		exit(1);
 	} else {
-		printf("Device 0x%x found\n", i2c_address);
+		if (verbose) printf("Device 0x%x found\n", i2c_address);
 	}
 
-	printf("Writing registers from file %s to I2C address 0x%x...\n", filename, i2c_address);
+	if (verbose) printf("Writing registers from file %s to I2C address 0x%x...\n", filename, i2c_address);
 
 	/* select i2c device */
 	selectDevice(file, i2c_address, "device");
 
-	/* parse registers file */
-	parseRegisters(buffer);
+	if (startregister == 0) {
 
-	printf("Done!\n");
+		/* parse registers file */
+		parseRegisters(buffer);
+
+	} else {
+		if (verbose) printf("Write from start register address 0x%x\n", startregister);
+
+		/* parse registers file */
+		parseRegisters2(buffer);
+	}
+
+	if (verbose) printf("Done!\n");
 
 	free(buffer);
 }
@@ -213,6 +230,91 @@ void parseRegisters(char * buffer) {
 
 }
 
+
+void parseRegisters2(char * buffer) {
+    char *p;
+    char *temp_string;
+    char *temp_param;
+    char *parts;
+	int i;
+	int counter;
+
+	unsigned char values[3];
+	unsigned char reg_lo_addr;
+	unsigned char reg_hi_addr;
+	unsigned char reg_value;
+
+	int current_register;
+	unsigned char current_value;
+
+	char buf[3];
+
+	counter = 0;
+
+    temp_string = strdup(buffer);
+
+    do {
+		p = strsep(&temp_string, "\n");
+		if (p) {
+		    /* split strings by "," */
+		    temp_param = strdup(p);
+			if (!temp_param) continue;
+
+			memset(values, 0, sizeof(values));
+			i = 0;
+			do {
+
+		    	parts = strsep(&temp_param, ",");
+				if (!parts) break;
+
+				/* skip comments */
+				if (parts[0] == '#') {
+					break;
+				}
+
+				if (strlen(parts) < 2) continue; // skip empty parts
+				if (strstr (parts, "/") != NULL) continue; // skip comments
+
+				/* make integers from strings (like 0x00) */
+				//values[i] = strtol(parts, 0, 16);
+
+				current_register = startregister + counter;
+				current_value = strtol(parts, 0, 16);
+				if (verbose) printf("reg 0x%x: %s - %d\n", current_register, parts, current_value);
+				
+				if (current_register > 0xFF) {
+					// two-byte address
+					reg_hi_addr = (current_register >> 8) & 0xFF;
+					reg_lo_addr = current_register & 0xFF;
+					reg_value = current_value;
+					buf[0] = reg_hi_addr;
+					buf[1] = reg_lo_addr;
+					buf[2] = reg_value;
+					//writeToDevice(file, buf, 3);
+					usleep(delayvalue);
+				} else {
+					// one-byte address
+					reg_lo_addr = current_register & 0xFF;
+					reg_value = current_value;
+					buf[0] = reg_lo_addr;
+					buf[1] = reg_value;
+					//writeToDevice(file, buf, 2);
+					usleep(delayvalue);
+				}
+				
+				//i++;
+
+				counter++;
+
+			} while (parts);
+
+		}
+
+    } while(p);
+
+}
+
+
 void writeToDevice(int file, char * buf, int len) {
 	if (write(file, buf, len) != len) {
 		printf("Can't write to device\n");
@@ -253,5 +355,7 @@ void usage() {
 	printf ("-a\t\tdevice I2C address, for example, -a 0x3c\n");
 	printf ("-f\t\tfilename with registers values\n");
 	printf ("-s\t\tmake pause (at microseconds) after every write, for example, -s 10\n");
+	printf ("-r\t\tstart register address -r 0x80 or 0x8012 for two-byte address\n");
+	printf ("-v\t\tverbose\n");
 	printf ("-? or -h\tshow this info\n");
 }
